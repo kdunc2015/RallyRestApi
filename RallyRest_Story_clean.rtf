@@ -1,0 +1,243 @@
+{\rtf1\ansi\ansicpg1252\deff0\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}}
+{\colortbl ;\red0\green0\blue255;}
+{\*\generator Msftedit 5.41.21.2510;}\viewkind4\uc1\pard\sa200\sl276\slmult1\lang9\f0\fs22\par
+Private Sub Workbook_Open()\par
+\par
+ 'GetStoriesForm.Show\par
+\par
+'Public Sub QueryStories(RallyUserName As String, RallyPassword As String, RallyWorkspace As String, _\par
+'    RallyProject As String, SampleQuery As String)\par
+    \par
+    'Owner Object\par
+    Dim storyOwner As Object\par
+    Dim ownerName As String\par
+    \par
+    'Project Object\par
+    Dim storyProject As Object\par
+    Dim projectName As String\par
+    \par
+   'Feature Object\par
+    Dim storyFeature As Object\par
+    Dim featureName As String\par
+    \par
+    \par
+    \par
+    Dim myRallyRestApi As RallyRestApi\par
+    Dim myRallyUsername As String, myRallyPassword As String, myWSAPIVersion As String\par
+    Dim myRallyURL As String\par
+    Dim myRallyConnection As RallyConnection\par
+    Dim myRallyQuery As RallyQuery\par
+    Dim myRallyRequest As RallyRequest, mySubscriptionRequest As RallyRequest\par
+    Dim myWorkspace As Object\par
+    Dim myWorkspaceRef As String\par
+    Dim RallyWorkspace As String\par
+    'comment the following line to get all portfolios\par
+    Dim RallyProject As String\par
+    Dim myResponseString As String\par
+    Dim myFormattedID As String\par
+    Dim myRallyAuthKey As String\par
+    Dim myRallySessionCookie As String\par
+    Dim myQueryResult As RallyQueryResult\par
+    Dim myQueryResultObject As Object, myQueryResultString As String\par
+    Dim totalResultCount As Long\par
+    Dim myResults As Object\par
+    Dim myResultString As String\par
+    Dim i As Long, currentRow As Long\par
+    Dim FormattedIDRange As String, NameRange As String, _\par
+        ScheduleStateRange As String, PlanEstimateRange As String, _\par
+        AcceptedDateRange As String, ObjectIDRange As String, _\par
+        BlockedRange As String, CreationDateRange As String, _\par
+        InProgressDateRange As String, ITWorkTypesRange As String, _\par
+        LastUpdateDateRange As String, ParentRange As String, _\par
+        KanbanStatusRange As String, TaskStatusRange As String, _\par
+        OwnerRange As String, ProjectRange As String, _\par
+        FeatureRange As String\par
+    \par
+    Dim currentDateTime As Date, currentDateTimeString As String\par
+      \par
+    ' Personal Settings\par
+    myRallyURL = "{\field{\*\fldinst{HYPERLINK "https://rally1.rallydev.com/slm"}}{\fldrslt{\ul\cf1 https://rally1.rallydev.com/slm}}}\f0\fs22 "\par
+    myRallyUsername = "Kristine.Duncan@ihs.com"\par
+    myRallyPassword = "password"\par
+    myWSAPIVersion = "v2.0"\par
+    RallyWorkspace = "IHS"\par
+    'comment the following line to get all portfolios\par
+    RallyProject = "OE&RM (IT)"\par
+\par
+   \par
+    ' Instantiate RallyConnection\par
+    Set myRallyConnection = New RallyConnection\par
+    myRallyConnection.UserID = myRallyUsername\par
+    myRallyConnection.Password = myRallyPassword\par
+    myRallyConnection.WsapiVersion = myWSAPIVersion\par
+    myRallyConnection.RallyUrl = myRallyURL\par
+    \par
+    ' Instantiate RallyRestApi\par
+    Set myRallyRestApi = New RallyRestApi\par
+    myRallyRestApi.RallyConnection = myRallyConnection\par
+    \par
+    ' Authenticate To Rally\par
+    isAuthenticated = myRallyConnection.Authenticate()\par
+    \par
+    If Not isAuthenticated Then\par
+        MsgBox "Failed to authenticate as: " & myRallyUsername\par
+        Exit Sub\par
+    End If\par
+    \par
+    myRallyAuthKey = myRallyConnection.SecurityToken\par
+    myRallySessionCookie = myRallyConnection.SessionCookie\par
+    \par
+    ' Lookup Workspace\par
+    Set myWorkspace = myRallyRestApi.findWorkspace("IHS")\par
+    \par
+    ' Check to see if we found workspace of interest\par
+    If myWorkspace Is Nothing Then\par
+        MsgBox "Could not find Workspace named: " & RallyWorkspace\par
+        Exit Sub\par
+    End If\par
+    \par
+    ' Lookup Project\par
+    'comment the following line to get all portfolios\par
+    Set myProject = myRallyRestApi.findProject(myWorkspace, RallyProject)\par
+    \par
+    ' Check to see if we found project of interest\par
+'    If myProject Is Nothing Then\par
+'        MsgBox "Could not find Project named: " & RallyProject\par
+'        Exit Sub\par
+'    End If\par
+    \par
+  \par
+\par
+\par
+    ' Formulate a Query\par
+    Set myRallyQuery = New RallyQuery\par
+    \par
+    ' Additional Sample Query Syntax in commented section below\par
+    ' For now, we'll take query passed in via dialog box\par
+    myRallyQuery.queryString = SampleQuery\par
+    \par
+    ' myFormattedID = addEscapedDoubleQuotes("US100")\par
+    ' myRallyQuery.queryString = "(FormattedID < " & myFormattedID & ")"\par
+    ' myRallyQuery.AddAnd ("(CreationDate > 2012-01-01)")\par
+    \par
+    'necessary?\par
+    Worksheets("QueryStories").Range("A5").Value = myRallyQuery.queryString\par
+\par
+    \par
+    ' Create a RallyRequest\par
+    Set myRallyRequest = New RallyRequest\par
+    myRallyRequest.ArtifactName = "hierarchicalrequirement"\par
+    myRallyRequest.Fetch = "Name,FormattedID,ScheduleState,PlanEstimate,AcceptedDate,ObjectID,Blocked,CreationDate," & _\par
+    "InProgressDate,ITWorkTypes,LastUpdateDate,Parent,KanbanStatus,TaskStatus,Owner,Feature,Project"\par
+    myRallyRequest.Workspace = myWorkspace("_ref")\par
+    'comment the following line to get all portfolios\par
+    myRallyRequest.Project = myProject("_ref")\par
+    myRallyRequest.pageSize = 20\par
+    Set myRallyRequest.Query = myRallyQuery\par
+    myRallyRequest.Order = "FormattedID Asc"\par
+    myRallyRequest.ProjectScopeDown = True\par
+    \par
+    ' Execute Query\par
+    myRallyRestApi.RallyRequest = myRallyRequest\par
+    Set myQueryResult = myRallyRestApi.Query(myRallyRequest)\par
+    Set myResults = myQueryResult.Results\par
+    \par
+    totalResultCount = myQueryResult.totalResultCount\par
+    \par
+    If totalResultCount = 0 Then\par
+        MsgBox "No Stories found matching query: " & SampleQuery\par
+        Exit Sub\par
+    End If\par
+     \par
+     \par
+    \par
+    currentRow = 2\par
+    For Each result In myResults\par
+        \par
+        \par
+      \par
+    \par
+        ' Cell References\par
+        FormattedIDRange = "A" & currentRow\par
+        NameRange = "B" & currentRow\par
+        ScheduleStateRange = "C" & currentRow\par
+        PlanEstimateRange = "D" & currentRow\par
+        AcceptedDateRange = "E" & currentRow\par
+        ObjectIDRange = "F" & currentRow\par
+        BlockedRange = "G" & currentRow\par
+        CreationDateRange = "H" & currentRow\par
+        FeatureRange = "I" & currentRow\par
+        InProgressDateRange = "J" & currentRow\par
+        ITWorkTypesRange = "K" & currentRow\par
+        LastUpdateDateRange = "L" & currentRow\par
+        OwnerRange = "M" & currentRow\par
+        ParentRange = "N" & currentRow\par
+        ProjectRange = "O" & currentRow\par
+        KanbanStatusRange = "P" & currentRow\par
+        TaskStatusRange = "Q" & currentRow\par
+       \par
+       'Pull Owner display name from Owner Object\par
+         \par
+       Set storyOwner = result("Owner")\par
+       ownerName = storyOwner("_refObjectName")\par
+       \par
+            If storyOwner Is Nothing Then\par
+        ownerName = "None"\par
+            Else\par
+              ownerName = storyOwner("_refObjectName")\par
+               \par
+        End If\par
+        \par
+              'Pull Project display name from Project Object\par
+      Set storyProject = result("Project")\par
+       projectName = storyProject("_refObjectName")\par
+\par
+            If storyProject Is Nothing Then\par
+        projectName = "None"\par
+            Else\par
+              projectName = storyProject("_refObjectName")\par
+\par
+        End If\par
+\par
+      'Pull Feature display name from Feature Object\par
+      Set storyFeature = result("Feature")\par
+       featureName = storyFeature("_refObjectName")\par
+\par
+            If storyFeature Is Nothing Then\par
+        featureName = "None"\par
+            Else\par
+              featureName = storyFeature("_refObjectName")\par
+\par
+        End If\par
+        \par
+        \par
+        \par
+        ' Set values\par
+        Worksheets("QueryStories").Range(FormattedIDRange).Value = result("FormattedID")\par
+        Worksheets("QueryStories").Range(NameRange).Value = result("Name")\par
+        Worksheets("QueryStories").Range(ScheduleStateRange).Value = result("ScheduleState")\par
+        Worksheets("QueryStories").Range(PlanEstimateRange) = result("PlanEstimate")\par
+        Worksheets("QueryStories").Range(AcceptedDateRange).Value = result("AcceptedDate")\par
+        Worksheets("QueryStories").Range(BlockedRange).Value = result("Blocked")\par
+        Worksheets("QueryStories").Range(CreationDateRange).Value = result("CreationDate")\par
+        Worksheets("QueryStories").Range(FeatureRange).Value = featureName\par
+        Worksheets("QueryStories").Range(InProgressDateRange).Value = result("InProgressDate")\par
+        Worksheets("QueryStories").Range(ITWorkTypesRange).Value = result("ITWorkTypes")\par
+        Worksheets("QueryStories").Range(LastUpdateDateRange).Value = result("LastUpdateDate")\par
+        Worksheets("QueryStories").Range(OwnerRange).Value = ownerName\par
+        Worksheets("QueryStories").Range(ParentRange).Value = result("Parent")\par
+        Worksheets("QueryStories").Range(ProjectRange).Value = projectName\par
+        Worksheets("QueryStories").Range(KanbanStatusRange).Value = result("KanbanStatus")\par
+        Worksheets("QueryStories").Range(TaskStatusRange).Value = result("TaskStatus")\par
+    \par
+        \par
+        currentRow = currentRow + 1\par
+    Next\par
+    \par
+    MsgBox "Finished Querying Rally"\par
+\par
+'End Sub\par
+\par
+End Sub\par
+}
+ 
